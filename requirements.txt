@@ -1,0 +1,10 @@
+aiogram>=3.0.0,<4.0
+python-dotenv
+cryptography
+vosk
+edge-tts
+pydantic-settings
+google-genai
+Pillow
+google-api-core
+asyncpg
