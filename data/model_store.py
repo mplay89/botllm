@@ -16,8 +16,7 @@ def _get_model_priority(model_name: str) -> int:
     return 100 # Пріоритет за замовчуванням для інших моделей
 
 async def sync_models(api_models: List[str]):
-    """
-    Синхронізує список моделей з API з базою даних.
+    """Синхронізує список моделей з API з базою даних.
     Якщо списки відрізняються, повністю перезаписує таблицю в БД.
     """
     async with get_db_connection() as conn:
@@ -38,12 +37,11 @@ async def sync_models(api_models: List[str]):
                     "INSERT INTO ai_models (model_name, priority) VALUES ($1, $2)",
                     model_name, priority
                 )
-        
+
         logger.info(f"Таблицю ai_models повністю оновлено. Додано {len(api_models)} моделей.")
 
 async def get_available_models() -> List[str]:
-    """
-    Повертає список активних моделей AI з бази даних, відсортований за пріоритетом.
+    """Повертає список активних моделей AI з бази даних, відсортований за пріоритетом.
     """
     async with get_db_connection() as conn:
         rows = await conn.fetch(

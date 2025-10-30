@@ -4,8 +4,7 @@ from data.database import get_db_connection
 from config.settings import settings
 
 async def is_admin(user_id: int) -> bool:
-    """
-    Перевіряє, чи є користувач адміном або власником, на основі ролі в БД.
+    """Перевіряє, чи є користувач адміном або власником, на основі ролі в БД.
     """
     role = await get_user_role(user_id)
     return role in ['admin', 'owner']
@@ -15,7 +14,7 @@ async def add_admin(user_id: int) -> bool:
     # Власник не може бути розжалуваний або підвищений
     if user_id == settings.OWNER_ID:
         return False
-        
+
     current_role = await get_user_role(user_id)
     if current_role != 'admin':
         await update_user_role(user_id, 'admin')

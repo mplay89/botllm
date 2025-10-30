@@ -1,9 +1,14 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+"""Модуль для створення reply-клавіатур."""
+
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+
 from data.admin_store import is_admin
+
 
 async def get_main_menu(user_id: int | None = None) -> ReplyKeyboardMarkup:
     """
     Повертає клавіатуру головного меню.
+
     Додає кнопку адмін-панелі, якщо користувач є адміном.
     """
     keyboard = [
@@ -18,9 +23,7 @@ async def get_main_menu(user_id: int | None = None) -> ReplyKeyboardMarkup:
 
 
 def get_settings_menu() -> ReplyKeyboardMarkup:
-    """
-    Повертає клавіатуру меню налаштувань.
-    """
+    """Повертає клавіатуру меню налаштувань."""
     keyboard = [
         [
             KeyboardButton(text="🗣️ Голос (Чоловічий)"),
@@ -35,25 +38,27 @@ def get_settings_menu() -> ReplyKeyboardMarkup:
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
+
 def get_admin_menu(is_owner: bool) -> ReplyKeyboardMarkup:
-    """
-    Повертає клавіатуру адмін-панелі.
-    """
+    """Повертає клавіатуру адмін-панелі."""
     keyboard = [
         [KeyboardButton(text="🤖 Змінити модель AI")],
-        [KeyboardButton(text="⬅️ Назад до головного меню")]
+        [KeyboardButton(text="⬅️ Назад до головного меню")],
     ]
     if is_owner:
         keyboard.insert(1, [KeyboardButton(text="👥 Редагувати адмінів")])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
+
 def get_admin_management_keyboard() -> ReplyKeyboardMarkup:
-    """
-    Повертає клавіатуру для керування адмінами.
-    """
+    """Повертає клавіатуру для керування адмінами."""
     keyboard = [
-        [KeyboardButton(text="➕ Додати адміна"), KeyboardButton(text="➖ Видалити адміна")],
+        [
+            KeyboardButton(text="➕ Додати адміна"),
+            KeyboardButton(text="➖ Видалити адміна"),
+        ],
         [KeyboardButton(text="📋 Список адмінів")],
-        [KeyboardButton(text="⬅️ Назад до адмін-панелі")]
+        [KeyboardButton(text="⬅️ Назад до адмін-панелі")],
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+

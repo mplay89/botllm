@@ -21,8 +21,7 @@ async def get_db_connection():
             await conn.close()
 
 async def init_db():
-    """
-    Ініціалізує базу даних та створює таблиці, якщо вони не існують.
+    """Ініціалізує базу даних та створює таблиці, якщо вони не існують.
     """
     try:
         async with get_db_connection() as conn:
