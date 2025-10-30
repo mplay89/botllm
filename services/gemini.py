@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from aiogram import Bot
 from google.api_core import exceptions as google_exceptions
@@ -88,7 +88,7 @@ class GeminiService:
             f"зверніться до {owner_contact}."
         )
 
-    async def _handle_api_error(self, error: Exception, attempt: int, model_name: str) -> str | None:
+    async def _handle_api_error(self, error: Exception, attempt: int, model_name: str) -> Optional[str]:
         """Обробляє помилки API та повертає повідомлення для користувача."""
         if isinstance(error, asyncio.TimeoutError):
             logger.warning(

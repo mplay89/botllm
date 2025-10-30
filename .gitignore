@@ -19,7 +19,12 @@ eggs/
 .eggs/
 
 # Environments
+.env
+.env.local
 .env/
+venv/
+env/
+ENV/
 
 # Editors and IDEs
 .vscode/
@@ -40,6 +45,10 @@ Thumbs.db
 .pytest_cache/
 htmlcov/
 .coverage
+.coverage.*
+coverage.xml
+.tox/
+*.cover
 
 # Jupyter Notebook
 .ipynb_checkpoints/
