@@ -1,10 +1,11 @@
+"""Налаштування системи логування для всього проєкту."""
+
 import logging
 import sys
 
-def setup_logging():
-    """
-    Налаштовує базову конфігурацію логування для проєкту.
-    """
+
+def setup_logging() -> None:
+    """Налаштовує базову конфігурацію логування для проєкту."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -12,7 +13,8 @@ def setup_logging():
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.info("Логування успішно налаштовано.")
+    logging.getLogger(__name__).info("Логування успішно налаштовано.")
+
 
 def get_logger(name: str) -> logging.Logger:
     """
