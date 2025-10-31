@@ -18,3 +18,7 @@ COPY . .
 
 # Command to run the application
 CMD ["python", "main.py"]
+
+# Health check to verify the bot is running and connected
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python health_check.py

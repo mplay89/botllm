@@ -6,3 +6,21 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
+    labels:
+      - "autoheal=true"
+
+  test:
+    build: .
+    env_file: .env
+    volumes:
+      - .:/app
+    command: >
+      bash -c "pip install -r requirements-dev.txt && pytest"
+
+  autoheal:
+    image: willfarrell/autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
