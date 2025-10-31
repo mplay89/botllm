@@ -133,9 +133,7 @@ class GeminiService:
         for attempt in range(runtime_config.API_RETRY_ATTEMPTS):
             try:
                 response = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        client.models.generate_content, model=model_name, contents=full_contents
-                    ),
+                    client.aio.models.generate_content(model=model_name, contents=full_contents),
                     timeout=runtime_config.GEMINI_API_TIMEOUT,
                 )
                 response_text = response.text
