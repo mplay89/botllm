@@ -1,6 +1,4 @@
-"""
-Обробники для адмін-панелі."""
-
+import time
 from aiogram import F, Router
 from aiogram.filters import Command, Filter
 from aiogram.fsm.context import FSMContext
@@ -15,6 +13,9 @@ from keyboards.inline import get_model_selection_keyboard
 from keyboards.reply import get_admin_management_keyboard, get_admin_menu
 from utils.logging_setup import get_logger
 
+# Імпортуємо кеші для моніторингу
+from data import cache
+
 router = Router()
 logger = get_logger(__name__)
 
@@ -27,11 +28,61 @@ class AdminFilter(Filter):
         return await is_admin(message.from_user.id)
 
 
+class OwnerFilter(Filter):
+    """Фільтр для перевірки, чи є користувач власником."""
+
+    async def __call__(self, message: Message) -> bool:
+        """Перевіряє, чи є користувач власником бота."""
+        return message.from_user.id == settings.OWNER_ID
+
+
 class AdminActions(StatesGroup):
     """Стани для FSM адмін-панелі."""
 
     waiting_for_admin_to_add = State()
     waiting_for_admin_to_remove = State()
+
+
+# --- ІНФОРМАЦІЯ ПРО СИСТЕМУ (для власника) ---
+
+@router.message(OwnerFilter(), Command("cache_info"))
+async def cache_info_handler(message: Message) -> None:
+    """Показує поточний стан кешу."""
+    logger.info("Власник (ID: %d) запросив інформацію про кеш.", message.from_user.id)
+
+    now = time.time()
+    info_parts = ["<b>ℹ️ Поточний стан кешу:</b>"]
+
+    # 1. Кеш налаштувань
+    info_parts.append("\n<b>Кеш налаштувань (settings_cache):</b>")
+    if cache.settings_cache:
+        for key, data in cache.settings_cache.items():
+            ttl = round(data['timestamp'] + cache.SETTINGS_CACHE_TTL - now)
+            info_parts.append(f"- <code>{key}</code>: {data['value']} (залишилось {ttl} сек)")
+    else:
+        info_parts.append("- <em>Порожньо</em>")
+
+    # 2. Кеш моделей
+    info_parts.append("\n<b>Кеш моделей (models_cache):</b>")
+    if cache.models_cache:
+        ttl = round(cache.models_cache['timestamp'] + cache.MODELS_CACHE_TTL - now)
+        models = cache.models_cache['models']
+        info_parts.append(f"- <code>models</code>: {models} (залишилось {ttl} сек)")
+    else:
+        info_parts.append("- <em>Порожньо</em>")
+
+    # 3. Кеш користувачів
+    info_parts.append("\n<b>Кеш користувачів (user_cache):</b>")
+    if cache.user_cache:
+        for user_id, user_data in cache.user_cache.items():
+            info_parts.append(f"\n- <b>Користувач <code>{user_id}</code>:</b>")
+            for key, data in user_data.items():
+                ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+                info_parts.append(f"  - <code>{key}</code>: {data['value']} (залишилось {ttl} сек)")
+    else:
+        info_parts.append("- <em>Порожньо</em>")
+
+    await message.answer("\n".join(info_parts))
 
 
 # --- НАВІГАЦІЯ АДМІН-ПАНЕЛІ ---
@@ -111,7 +162,7 @@ async def set_model_callback_handler(callback: CallbackQuery) -> None:
 # --- КЕРУВАННЯ АДМІНАМИ (для власника) ---
 
 
-@router.message(AdminFilter(), F.text == "👥 Редагувати адмінів")
+@router.message(OwnerFilter(), F.text == "👥 Редагувати адмінів")
 async def manage_admins_handler(message: Message) -> None:
     """Показує меню керування адмінами."""
     if message.from_user.id != settings.OWNER_ID:
@@ -125,7 +176,7 @@ async def manage_admins_handler(message: Message) -> None:
     )
 
 
-@router.message(AdminFilter(), F.text == "➕ Додати адміна")
+@router.message(OwnerFilter(), F.text == "➕ Додати адміна")
 async def add_admin_start_handler(message: Message, state: FSMContext) -> None:
     """Запускає процес додавання нового адміна."""
     if message.from_user.id != settings.OWNER_ID:
@@ -140,7 +191,7 @@ async def add_admin_start_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(AdminFilter(), F.text == "➖ Видалити адміна")
+@router.message(OwnerFilter(), F.text == "➖ Видалити адміна")
 async def remove_admin_start_handler(message: Message, state: FSMContext) -> None:
     """Запускає процес видалення адміна."""
     if message.from_user.id != settings.OWNER_ID:
@@ -155,7 +206,7 @@ async def remove_admin_start_handler(message: Message, state: FSMContext) -> Non
     )
 
 
-@router.message(AdminFilter(), F.text == "📋 Список адмінів")
+@router.message(OwnerFilter(), F.text == "📋 Список адмінів")
 async def list_admins_handler(message: Message) -> None:
     """Показує список ID всіх адмінів."""
     if message.from_user.id != settings.OWNER_ID:

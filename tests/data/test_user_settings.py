@@ -5,6 +5,12 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from aiogram.types import User
 
+# Очищення кешу перед кожним тестом
+@pytest.fixture(autouse=True)
+def reset_cache():
+    from data import cache
+    cache.user_cache = {}
+
 from data.user_settings import (
     register_user_if_not_exists,
     get_user_role,
@@ -36,7 +42,6 @@ class TestUserRegistration:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             await register_user_if_not_exists(mock_user)
 
@@ -63,7 +68,6 @@ class TestUserRegistration:
 
             with patch('data.user_settings.get_db_connection') as mock_get_conn:
                 mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-                mock_get_conn.return_value.__aexit__ = AsyncMock()
 
                 await register_user_if_not_exists(mock_user)
 
@@ -82,7 +86,6 @@ class TestUserRegistration:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             await register_user_if_not_exists(mock_user)
 
@@ -100,7 +103,6 @@ class TestUserRoles:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             role = await get_user_role(123)
 
@@ -114,7 +116,6 @@ class TestUserRoles:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             await update_user_role(123, "admin")
 
@@ -123,6 +124,33 @@ class TestUserRoles:
             assert "UPDATE users SET role" in call_args[0]
             assert call_args[1] == "admin"
             assert call_args[2] == 123
+
+    async def test_get_user_role_caching(self):
+        """Test that user roles are cached."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchval = AsyncMock(return_value="admin")
+
+        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+            mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+
+            # First call should hit DB
+            role1 = await get_user_role(123)
+            assert role1 == "admin"
+            mock_conn.fetchval.assert_called_once()
+
+            # Second call should use cache
+            role2 = await get_user_role(123)
+            assert role2 == "admin"
+            mock_conn.fetchval.assert_called_once() # Not called again
+
+            # Cache should be invalidated after update
+            await update_user_role(123, "user")
+            mock_conn.fetchval.reset_mock()
+            mock_conn.fetchval.return_value = "user"
+
+            role3 = await get_user_role(123)
+            assert role3 == "user"
+            mock_conn.fetchval.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -139,7 +167,6 @@ class TestTTSSettings:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             settings = await get_user_tts_settings(123)
 
@@ -153,12 +180,38 @@ class TestTTSSettings:
 
         with patch('data.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             settings = await get_user_tts_settings(123)
 
             assert settings['tts_enabled'] is True
             assert settings['tts_voice'] == 'female'
+
+    async def test_get_user_tts_settings_caching(self):
+        """Test that TTS settings are cached."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(return_value={'tts_enabled': False, 'tts_voice': 'test_voice'})
+
+        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+            mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+
+            # First call
+            s1 = await get_user_tts_settings(123)
+            assert s1['tts_enabled'] is False
+            mock_conn.fetchrow.assert_called_once()
+
+            # Second call from cache
+            s2 = await get_user_tts_settings(123)
+            assert s2['tts_enabled'] is False
+            mock_conn.fetchrow.assert_called_once()
+
+            # Invalidate and check again
+            await update_user_tts_enabled(123, True)
+            mock_conn.fetchrow.reset_mock()
+            mock_conn.fetchrow.return_value = {'tts_enabled': True, 'tts_voice': 'test_voice'}
+
+            s3 = await get_user_tts_settings(123)
+            assert s3['tts_enabled'] is True
+            mock_conn.fetchrow.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -217,3 +270,4 @@ class TestChatContext:
             call_args = mock_conn.execute.call_args[0]
             assert "DELETE FROM chat_history" in call_args[0]
             assert call_args[1] == 123
+

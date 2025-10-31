@@ -14,8 +14,7 @@ services:
     env_file: .env
     volumes:
       - .:/app
-    command: >
-      bash -c "pip install -r requirements-dev.txt && pytest"
+    command: pytest
 
   autoheal:
     image: willfarrell/autoheal
