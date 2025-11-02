@@ -1,6 +1,8 @@
 import aiofiles
 import os
 import time
+from typing import List, Tuple
+
 from aiogram import F, Router
 from aiogram.filters import Command, Filter
 from aiogram.fsm.context import FSMContext
@@ -50,8 +52,6 @@ class AdminActions(StatesGroup):
 
 # --- ІНФОРМАЦІЯ ПРО СИСТЕМУ (для власника) ---
 
-from typing import List
-
 def _get_settings_cache_info(now: float) -> List[str]:
     """Повертає інформацію про кеш налаштувань."""
     info_parts = ["\nКеш налаштувань (settings_cache):"]
@@ -74,52 +74,65 @@ def _get_models_cache_info(now: float) -> List[str]:
         info_parts.append(EMPTY_CACHE_MESSAGE)
     return info_parts
 
-async def _get_user_cache_info(now: float, is_owner: bool) -> List[str]:
-    """Повертає інформацію про кеш користувачів."""
-    info_parts = ["\nКеш користувачів (user_cache):"]
-    user_cache_view = {}
-    if is_owner:
-        admin_cache_view = {}
-        for user_id_cache, user_data in cache.user_cache.items():
-            if await is_admin(user_id_cache):
-                admin_cache_view[user_id_cache] = user_data
-            else:
-                user_cache_view[user_id_cache] = user_data
-        
-        if not admin_cache_view and not user_cache_view:
-            info_parts.append(EMPTY_CACHE_MESSAGE)
-        else:
-            if admin_cache_view:
-                info_parts.append("\n👑 **Адміністратори:**")
-                for user_id_cache, user_data in admin_cache_view.items():
-                    info_parts.append(f"\n- Користувач {user_id_cache}:")
-                    for key, data in user_data.items():
-                        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
-                        info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
-            
-            if user_cache_view:
-                info_parts.append("\n👥 **Користувачі:**")
-                for user_id_cache, user_data in user_cache_view.items():
-                    info_parts.append(f"\n- Користувач {user_id_cache}:")
-                    for key, data in user_data.items():
-                        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
-                        info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
-    else:  # Для адмінів
-        for user_id_cache, user_data in cache.user_cache.items():
-            if not await is_admin(user_id_cache):
-                user_cache_view[user_id_cache] = user_data
+def _format_user_cache_entry(user_id: int, user_data: dict, now: float) -> List[str]:
+    """Форматує запис кешу для одного користувача."""
+    info = [f"\n- Користувач {user_id}:"]
+    for key, data in user_data.items():
+        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+        info.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+    return info
 
-        if user_cache_view:
-            for user_id_cache, user_data in user_cache_view.items():
-                info_parts.append(f"\n- Користувач {user_id_cache}:")
-                for key, data in user_data.items():
-                    ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
-                    info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+async def _get_owner_user_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш користувачів для власника."""
+    info_parts = []
+    admin_cache_view = {}
+    user_cache_view = {}
+
+    for user_id_cache, user_data in cache.user_cache.items():
+        if await is_admin(user_id_cache):
+            admin_cache_view[user_id_cache] = user_data
         else:
-            info_parts.append(EMPTY_CACHE_MESSAGE)
+            user_cache_view[user_id_cache] = user_data
+
+    if not admin_cache_view and not user_cache_view:
+        return [EMPTY_CACHE_MESSAGE]
+
+    if admin_cache_view:
+        info_parts.append("\n👑 **Адміністратори:**")
+        for user_id_cache, user_data in admin_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
+
+    if user_cache_view:
+        info_parts.append("\n👥 **Користувачі:**")
+        for user_id_cache, user_data in user_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
             
     return info_parts
 
+async def _get_admin_user_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш користувачів для адміна."""
+    info_parts = []
+    user_cache_view = {}
+    for user_id_cache, user_data in cache.user_cache.items():
+        if not await is_admin(user_id_cache):
+            user_cache_view[user_id_cache] = user_data
+
+    if user_cache_view:
+        for user_id_cache, user_data in user_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
+    else:
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+        
+    return info_parts
+
+async def _get_user_cache_info(now: float, is_owner: bool) -> List[str]:
+    """Повертає інформацію про кеш користувачів."""
+    info_parts = ["\nКеш користувачів (user_cache):"]
+    if is_owner:
+        info_parts.extend(await _get_owner_user_cache_info(now))
+    else:
+        info_parts.extend(await _get_admin_user_cache_info(now))
+    return info_parts
 
 @router.message(AdminFilter(), F.text == "ℹ️ Інфо про кеш")
 async def cache_info_handler(message: Message) -> None:
