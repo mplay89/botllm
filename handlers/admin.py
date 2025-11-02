@@ -1,3 +1,4 @@
+import aiofiles
 import os
 import time
 from aiogram import F, Router
@@ -19,6 +20,9 @@ from data import cache
 
 router = Router()
 logger = get_logger(__name__)
+
+
+EMPTY_CACHE_MESSAGE = "- Порожньо"
 
 
 class AdminFilter(Filter):
@@ -46,52 +50,44 @@ class AdminActions(StatesGroup):
 
 # --- ІНФОРМАЦІЯ ПРО СИСТЕМУ (для власника) ---
 
-@router.message(AdminFilter(), F.text == "ℹ️ Інфо про кеш")
-async def cache_info_handler(message: Message) -> None:
-    """Надсилає звіт про стан кешу у вигляді файлу."""
-    user_id = message.from_user.id
-    is_owner = user_id == settings.OWNER_ID
-    logger.info(
-        "%s (ID: %d) запросив інформацію про кеш.",
-        "Власник" if is_owner else "Адмін",
-        user_id,
-    )
+from typing import List
 
-    now = time.time()
-    info_parts = ["ℹ️ Поточний стан кешу:"]
-
-    # 1. Кеш налаштувань (доступний всім адмінам)
-    info_parts.append("\nКеш налаштувань (settings_cache):")
+def _get_settings_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш налаштувань."""
+    info_parts = ["\nКеш налаштувань (settings_cache):"]
     if cache.settings_cache:
         for key, data in cache.settings_cache.items():
             ttl = round(data['timestamp'] + cache.SETTINGS_CACHE_TTL - now)
             info_parts.append(f"- {key}: {data['value']} (залишилось {ttl} сек)")
     else:
-        info_parts.append("- Порожньо")
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+    return info_parts
 
-    # 2. Кеш моделей (доступний всім адмінам)
-    info_parts.append("\nКеш моделей (models_cache):")
+def _get_models_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш моделей."""
+    info_parts = ["\nКеш моделей (models_cache):"]
     if cache.models_cache:
         ttl = round(cache.models_cache['timestamp'] + cache.MODELS_CACHE_TTL - now)
         models = cache.models_cache['models']
         info_parts.append(f"- models: {models} (залишилось {ttl} сек)")
     else:
-        info_parts.append("- Порожньо")
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+    return info_parts
 
-    # 3. Кеш користувачів (фільтрується для адмінів)
-    info_parts.append("\nКеш користувачів (user_cache):")
-
+async def _get_user_cache_info(now: float, is_owner: bool) -> List[str]:
+    """Повертає інформацію про кеш користувачів."""
+    info_parts = ["\nКеш користувачів (user_cache):"]
+    user_cache_view = {}
     if is_owner:
         admin_cache_view = {}
-        user_cache_view = {}
         for user_id_cache, user_data in cache.user_cache.items():
             if await is_admin(user_id_cache):
                 admin_cache_view[user_id_cache] = user_data
             else:
                 user_cache_view[user_id_cache] = user_data
-
+        
         if not admin_cache_view and not user_cache_view:
-            info_parts.append("- Порожньо")
+            info_parts.append(EMPTY_CACHE_MESSAGE)
         else:
             if admin_cache_view:
                 info_parts.append("\n👑 **Адміністратори:**")
@@ -108,9 +104,7 @@ async def cache_info_handler(message: Message) -> None:
                     for key, data in user_data.items():
                         ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
                         info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
-
     else:  # Для адмінів
-        user_cache_view = {}
         for user_id_cache, user_data in cache.user_cache.items():
             if not await is_admin(user_id_cache):
                 user_cache_view[user_id_cache] = user_data
@@ -122,13 +116,33 @@ async def cache_info_handler(message: Message) -> None:
                     ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
                     info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
         else:
-            info_parts.append("- Порожньо (або немає користувачів для відображення)")
+            info_parts.append(EMPTY_CACHE_MESSAGE)
+            
+    return info_parts
+
+
+@router.message(AdminFilter(), F.text == "ℹ️ Інфо про кеш")
+async def cache_info_handler(message: Message) -> None:
+    """Надсилає звіт про стан кешу у вигляді файлу."""
+    user_id = message.from_user.id
+    is_owner = user_id == settings.OWNER_ID
+    logger.info(
+        "%s (ID: %d) запросив інформацію про кеш.",
+        "Власник" if is_owner else "Адмін",
+        user_id,
+    )
+
+    now = time.time()
+    info_parts = ["ℹ️ Поточний стан кешу:"]
+    info_parts.extend(_get_settings_cache_info(now))
+    info_parts.extend(_get_models_cache_info(now))
+    info_parts.extend(await _get_user_cache_info(now, is_owner))
 
     # Створюємо тимчасовий файл
     file_path = f"cache_info_{user_id}.txt"
     try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(info_parts))
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+            await f.write("\n".join(info_parts))
 
         # Надсилаємо файл
         document = FSInputFile(file_path)

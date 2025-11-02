@@ -80,13 +80,14 @@ async def test_admin_panel_handler(mock_is_admin, mock_message):
 @patch("handlers.admin.is_admin", new_callable=AsyncMock)
 @patch("handlers.admin.cache")
 @patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("builtins.open", new_callable=mock_open)
+@patch("handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_sends_file_owner(
-    mock_remove, mock_open_func, mock_cache, mock_is_admin, mock_message
+    mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
     """Тестує, що cache_info_handler надсилає повний файл для власника."""
     mock_message.from_user.id = OWNER_ID
+    mock_aio_open.return_value.__aenter__.return_value.write = AsyncMock()
 
     mock_cache.settings_cache = {}
     mock_cache.models_cache = {}
@@ -105,8 +106,8 @@ async def test_cache_info_handler_sends_file_owner(
 
     mock_message.answer_document.assert_called_once()
     # Перевіряємо вміст файлу
-    mock_open_func().write.assert_called_once()
-    file_content = mock_open_func().write.call_args[0][0]
+    mock_aio_open.return_value.__aenter__.return_value.write.assert_awaited_once()
+    file_content = mock_aio_open.return_value.__aenter__.return_value.write.await_args[0][0]
     assert "👑 **Адміністратори:**" in file_content
     assert "👥 **Користувачі:**" in file_content
     assert f"Користувач {ADMIN_ID}" in file_content
@@ -117,13 +118,14 @@ async def test_cache_info_handler_sends_file_owner(
 @patch("handlers.admin.is_admin", new_callable=AsyncMock)
 @patch("handlers.admin.cache")
 @patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("builtins.open", new_callable=mock_open)
+@patch("handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_sends_file_admin(
-    mock_remove, mock_open_func, mock_cache, mock_is_admin, mock_message
+    mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
     """Тестує, що cache_info_handler надсилає відфільтрований файл для адміна."""
     mock_message.from_user.id = ADMIN_ID  # Запит від адміна
+    mock_aio_open.return_value.__aenter__.return_value.write = AsyncMock()
 
     mock_cache.settings_cache = {}
     mock_cache.models_cache = {}
@@ -143,8 +145,8 @@ async def test_cache_info_handler_sends_file_admin(
 
     mock_message.answer_document.assert_called_once()
     # Перевіряємо вміст файлу
-    mock_open_func().write.assert_called_once()
-    file_content = mock_open_func().write.call_args[0][0]
+    mock_aio_open.return_value.__aenter__.return_value.write.assert_awaited_once()
+    file_content = mock_aio_open.return_value.__aenter__.return_value.write.await_args[0][0]
     assert f"Користувач {OWNER_ID}" not in file_content
     assert f"Користувач {ADMIN_ID}" not in file_content
     assert f"Користувач {USER_ID}" in file_content
@@ -178,14 +180,15 @@ async def test_owner_filter(mock_message):
 @patch("handlers.admin.is_admin", new_callable=AsyncMock)
 @patch("handlers.admin.cache")
 @patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("builtins.open", new_callable=mock_open)
+@patch("handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_empty_cache(
-    mock_remove, mock_open_func, mock_cache, mock_is_admin, mock_message
+    mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
     """Тестує cache_info_handler з порожнім кешем."""
     mock_message.from_user.id = OWNER_ID
     mock_is_admin.return_value = True
+    mock_aio_open.return_value.__aenter__.return_value.write = AsyncMock()
 
     mock_cache.settings_cache = {}
     mock_cache.models_cache = {}
@@ -194,22 +197,23 @@ async def test_cache_info_handler_empty_cache(
     await cache_info_handler(mock_message)
 
     mock_message.answer_document.assert_called_once()
-    mock_open_func().write.assert_called_once()
-    file_content = mock_open_func().write.call_args[0][0]
+    mock_aio_open.return_value.__aenter__.return_value.write.assert_awaited_once()
+    file_content = mock_aio_open.return_value.__aenter__.return_value.write.await_args[0][0]
     assert "- Порожньо" in file_content
 
 @pytest.mark.asyncio
 @patch("handlers.admin.is_admin", new_callable=AsyncMock)
 @patch("handlers.admin.cache")
 @patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("builtins.open", new_callable=mock_open)
+@patch("handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_with_data(
-    mock_remove, mock_open_func, mock_cache, mock_is_admin, mock_message
+    mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
     """Тестує cache_info_handler з непустим кешем."""
     mock_message.from_user.id = OWNER_ID
     mock_is_admin.return_value = True
+    mock_aio_open.return_value.__aenter__.return_value.write = AsyncMock()
 
     mock_cache.settings_cache = {"key": {"value": "value", "timestamp": time.time()}}
     mock_cache.models_cache = {"models": ["model1"], "timestamp": time.time()}
@@ -220,8 +224,8 @@ async def test_cache_info_handler_with_data(
     await cache_info_handler(mock_message)
 
     mock_message.answer_document.assert_called_once()
-    mock_open_func().write.assert_called_once()
-    file_content = mock_open_func().write.call_args[0][0]
+    mock_aio_open.return_value.__aenter__.return_value.write.assert_awaited_once()
+    file_content = mock_aio_open.return_value.__aenter__.return_value.write.await_args[0][0]
     assert "value" in file_content
     assert "model1" in file_content
 
