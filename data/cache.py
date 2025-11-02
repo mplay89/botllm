@@ -71,10 +71,10 @@ async def warm_up_caches():
 def invalidate_settings_cache(key: Optional[str] = None):
     """Інвалідує весь кеш налаштувань або за конкретним ключем."""
     global settings_cache
-    if key and key in settings_cache:
-        del settings_cache[key]
-    else:
+    if key is None:
         settings_cache = {}
+    elif key in settings_cache:
+        del settings_cache[key]
 
 def invalidate_models_cache():
     """Інвалідує кеш списку моделей."""
