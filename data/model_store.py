@@ -1,6 +1,9 @@
 import logging
+import time
 from typing import List
+
 from data.database import get_db_connection
+from data import cache
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +19,7 @@ def _get_model_priority(model_name: str) -> int:
     return 100 # Пріоритет за замовчуванням для інших моделей
 
 async def sync_models(api_models: List[str]):
-    """Синхронізує список моделей з API з базою даних.
-    Якщо списки відрізняються, повністю перезаписує таблицю в БД.
-    """
+    """Синхронізує список моделей з API з базою даних та інвалідує кеш."""
     async with get_db_connection() as conn:
         db_rows = await conn.fetch("SELECT model_name FROM ai_models ORDER BY model_name ASC")
         db_models = [row['model_name'] for row in db_rows]
@@ -37,14 +38,19 @@ async def sync_models(api_models: List[str]):
                     "INSERT INTO ai_models (model_name, priority) VALUES ($1, $2)",
                     model_name, priority
                 )
-
+        
+        cache.invalidate_models_cache()
         logger.info(f"Таблицю ai_models повністю оновлено. Додано {len(api_models)} моделей.")
 
 async def get_available_models() -> List[str]:
-    """Повертає список активних моделей AI з бази даних, відсортований за пріоритетом.
-    """
+    """Повертає список активних моделей AI з кешуванням."""
+    if cache.models_cache and (time.time() - cache.models_cache['timestamp']) < cache.MODELS_CACHE_TTL:
+        return cache.models_cache['models']
+
     async with get_db_connection() as conn:
         rows = await conn.fetch(
             "SELECT model_name FROM ai_models WHERE is_active = TRUE ORDER BY priority ASC, model_name ASC"
         )
-        return [row['model_name'] for row in rows]
+        models = [row['model_name'] for row in rows]
+        cache.models_cache = {'timestamp': time.time(), 'models': models}
+        return models

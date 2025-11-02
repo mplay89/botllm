@@ -1,8 +1,15 @@
 """
 Unit tests for data.config_store module.
 """
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch
+
+# Очищення кешу перед кожним тестом, щоб уникнути взаємного впливу
+@pytest.fixture(autouse=True)
+def reset_cache():
+    from data import cache
+    cache.settings_cache = {}
 
 from data.config_store import (
     get_setting,
@@ -23,7 +30,6 @@ class TestConfigStore:
 
         with patch('data.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             value = await get_setting("test_key")
 
@@ -37,7 +43,6 @@ class TestConfigStore:
 
         with patch('data.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             value = await get_setting("missing_key", default="default_val")
 
@@ -50,7 +55,6 @@ class TestConfigStore:
 
         with patch('data.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-            mock_get_conn.return_value.__aexit__ = AsyncMock()
 
             await set_setting("test_key", "test_value")
 
@@ -60,6 +64,33 @@ class TestConfigStore:
             assert "ON CONFLICT" in call_args[0]
             assert call_args[1] == "test_key"
             assert call_args[2] == "test_value"
+
+    async def test_get_setting_caching(self):
+        """Test that settings are cached to avoid repeated DB calls."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchval = AsyncMock(return_value="cached_value")
+
+        with patch('data.config_store.get_db_connection') as mock_get_conn:
+            mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+
+            # Перший виклик - має піти в БД
+            val1 = await get_setting("cached_key")
+            assert val1 == "cached_value"
+            mock_conn.fetchval.assert_called_once()
+
+            # Другий виклик - має повернути значення з кешу
+            val2 = await get_setting("cached_key")
+            assert val2 == "cached_value"
+            mock_conn.fetchval.assert_called_once()  # Кількість викликів не змінилась
+
+            # Скидаємо лічильник і перевіряємо, що після зміни налаштування кеш інвалідується
+            await set_setting("cached_key", "new_value")
+            mock_conn.fetchval.reset_mock()
+            mock_conn.fetchval.return_value = "new_value"
+
+            val3 = await get_setting("cached_key")
+            assert val3 == "new_value"
+            mock_conn.fetchval.assert_called_once() # Знову був 1 виклик до БД
 
 
 @pytest.mark.asyncio

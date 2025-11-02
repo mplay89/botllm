@@ -1,11 +1,13 @@
-"""
-Обробники для адмін-панелі."""
+import aiofiles
+import os
+import time
+from typing import List, Tuple
 
 from aiogram import F, Router
 from aiogram.filters import Command, Filter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from config.settings import settings
 from data.admin_store import add_admin, is_admin, list_admins, remove_admin
@@ -15,8 +17,14 @@ from keyboards.inline import get_model_selection_keyboard
 from keyboards.reply import get_admin_management_keyboard, get_admin_menu
 from utils.logging_setup import get_logger
 
+# Імпортуємо кеші для моніторингу
+from data import cache
+
 router = Router()
 logger = get_logger(__name__)
+
+
+EMPTY_CACHE_MESSAGE = "- Порожньо"
 
 
 class AdminFilter(Filter):
@@ -27,11 +35,142 @@ class AdminFilter(Filter):
         return await is_admin(message.from_user.id)
 
 
+class OwnerFilter(Filter):
+    """Фільтр для перевірки, чи є користувач власником."""
+
+    async def __call__(self, message: Message) -> bool:
+        """Перевіряє, чи є користувач власником бота."""
+        return message.from_user.id == settings.OWNER_ID
+
+
 class AdminActions(StatesGroup):
     """Стани для FSM адмін-панелі."""
 
     waiting_for_admin_to_add = State()
     waiting_for_admin_to_remove = State()
+
+
+# --- ІНФОРМАЦІЯ ПРО СИСТЕМУ (для власника) ---
+
+def _get_settings_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш налаштувань."""
+    info_parts = ["\nКеш налаштувань (settings_cache):"]
+    if cache.settings_cache:
+        for key, data in cache.settings_cache.items():
+            ttl = round(data['timestamp'] + cache.SETTINGS_CACHE_TTL - now)
+            info_parts.append(f"- {key}: {data['value']} (залишилось {ttl} сек)")
+    else:
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+    return info_parts
+
+def _get_models_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш моделей."""
+    info_parts = ["\nКеш моделей (models_cache):"]
+    if cache.models_cache:
+        ttl = round(cache.models_cache['timestamp'] + cache.MODELS_CACHE_TTL - now)
+        models = cache.models_cache['models']
+        info_parts.append(f"- models: {models} (залишилось {ttl} сек)")
+    else:
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+    return info_parts
+
+def _format_user_cache_entry(user_id: int, user_data: dict, now: float) -> List[str]:
+    """Форматує запис кешу для одного користувача."""
+    info = [f"\n- Користувач {user_id}:"]
+    for key, data in user_data.items():
+        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+        info.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+    return info
+
+async def _get_owner_user_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш користувачів для власника."""
+    info_parts = []
+    admin_cache_view = {}
+    user_cache_view = {}
+
+    for user_id_cache, user_data in cache.user_cache.items():
+        if await is_admin(user_id_cache):
+            admin_cache_view[user_id_cache] = user_data
+        else:
+            user_cache_view[user_id_cache] = user_data
+
+    if not admin_cache_view and not user_cache_view:
+        return [EMPTY_CACHE_MESSAGE]
+
+    if admin_cache_view:
+        info_parts.append("\n👑 **Адміністратори:**")
+        for user_id_cache, user_data in admin_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
+
+    if user_cache_view:
+        info_parts.append("\n👥 **Користувачі:**")
+        for user_id_cache, user_data in user_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
+            
+    return info_parts
+
+async def _get_admin_user_cache_info(now: float) -> List[str]:
+    """Повертає інформацію про кеш користувачів для адміна."""
+    info_parts = []
+    user_cache_view = {}
+    for user_id_cache, user_data in cache.user_cache.items():
+        if not await is_admin(user_id_cache):
+            user_cache_view[user_id_cache] = user_data
+
+    if user_cache_view:
+        for user_id_cache, user_data in user_cache_view.items():
+            info_parts.extend(_format_user_cache_entry(user_id_cache, user_data, now))
+    else:
+        info_parts.append(EMPTY_CACHE_MESSAGE)
+        
+    return info_parts
+
+async def _get_user_cache_info(now: float, is_owner: bool) -> List[str]:
+    """Повертає інформацію про кеш користувачів."""
+    info_parts = ["\nКеш користувачів (user_cache):"]
+    if is_owner:
+        info_parts.extend(await _get_owner_user_cache_info(now))
+    else:
+        info_parts.extend(await _get_admin_user_cache_info(now))
+    return info_parts
+
+@router.message(AdminFilter(), F.text == "ℹ️ Інфо про кеш")
+async def cache_info_handler(message: Message) -> None:
+    """Надсилає звіт про стан кешу у вигляді файлу."""
+    user_id = message.from_user.id
+    is_owner = user_id == settings.OWNER_ID
+    logger.info(
+        "%s (ID: %d) запросив інформацію про кеш.",
+        "Власник" if is_owner else "Адмін",
+        user_id,
+    )
+
+    now = time.time()
+    info_parts = ["ℹ️ Поточний стан кешу:"]
+    info_parts.extend(_get_settings_cache_info(now))
+    info_parts.extend(_get_models_cache_info(now))
+    info_parts.extend(await _get_user_cache_info(now, is_owner))
+
+    # Створюємо тимчасовий файл
+    file_path = f"cache_info_{user_id}.txt"
+    try:
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+            await f.write("\n".join(info_parts))
+
+        # Надсилаємо файл
+        document = FSInputFile(file_path)
+        await message.answer_document(document, caption="Звіт про стан кешу")
+        logger.info("Надіслано звіт про кеш %s (ID: %d).", "власнику" if is_owner else "адміну", user_id)
+
+    except Exception as e:
+        logger.error(
+            "Помилка під час створення або надсилання звіту про кеш: %s", e
+        )
+        await message.answer("Не вдалося згенерувати звіт про кеш.")
+    finally:
+        # Видаляємо тимчасовий файл
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 # --- НАВІГАЦІЯ АДМІН-ПАНЕЛІ ---
@@ -111,7 +250,7 @@ async def set_model_callback_handler(callback: CallbackQuery) -> None:
 # --- КЕРУВАННЯ АДМІНАМИ (для власника) ---
 
 
-@router.message(AdminFilter(), F.text == "👥 Редагувати адмінів")
+@router.message(OwnerFilter(), F.text == "👥 Редагувати адмінів")
 async def manage_admins_handler(message: Message) -> None:
     """Показує меню керування адмінами."""
     if message.from_user.id != settings.OWNER_ID:
@@ -125,7 +264,7 @@ async def manage_admins_handler(message: Message) -> None:
     )
 
 
-@router.message(AdminFilter(), F.text == "➕ Додати адміна")
+@router.message(OwnerFilter(), F.text == "➕ Додати адміна")
 async def add_admin_start_handler(message: Message, state: FSMContext) -> None:
     """Запускає процес додавання нового адміна."""
     if message.from_user.id != settings.OWNER_ID:
@@ -140,7 +279,7 @@ async def add_admin_start_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(AdminFilter(), F.text == "➖ Видалити адміна")
+@router.message(OwnerFilter(), F.text == "➖ Видалити адміна")
 async def remove_admin_start_handler(message: Message, state: FSMContext) -> None:
     """Запускає процес видалення адміна."""
     if message.from_user.id != settings.OWNER_ID:
@@ -155,7 +294,7 @@ async def remove_admin_start_handler(message: Message, state: FSMContext) -> Non
     )
 
 
-@router.message(AdminFilter(), F.text == "📋 Список адмінів")
+@router.message(OwnerFilter(), F.text == "📋 Список адмінів")
 async def list_admins_handler(message: Message) -> None:
     """Показує список ID всіх адмінів."""
     if message.from_user.id != settings.OWNER_ID:

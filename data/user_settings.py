@@ -1,8 +1,10 @@
 import logging
+import time
 from typing import Dict, Any, List, Optional
 from aiogram.types import User
 from data.database import get_db_connection
 from config.settings import settings
+from data import cache
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ async def register_user_if_not_exists(tg_user: User):
                 f"Новий користувач (ID: {tg_user.id}, Name: {tg_user.full_name}, "
                 f"Role: {role}) зареєстрований у базі даних."
             )
+            cache.invalidate_user_cache(tg_user.id)
 
         elif tg_user.id == settings.OWNER_ID and user_data['role'] != 'owner':
             await update_user_role(tg_user.id, 'owner')
@@ -33,41 +36,61 @@ async def register_user_if_not_exists(tg_user: User):
 
 
 async def get_user_role(user_id: int) -> Optional[str]:
-    """Повертає роль користувача з БД."""
+    """Повертає роль користувача з БД з кешуванням."""
+    cached = cache.user_cache.get(user_id, {}).get('role')
+    if cached and (time.time() - cached['timestamp']) < cache.USER_CACHE_TTL:
+        return cached['value']
+
     async with get_db_connection() as conn:
-        return await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
+        role = await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
+        if user_id not in cache.user_cache:
+            cache.user_cache[user_id] = {}
+        cache.user_cache[user_id]['role'] = {'timestamp': time.time(), 'value': role}
+        return role
 
 async def update_user_role(user_id: int, role: str):
-    """Оновлює роль користувача в БД."""
+    """Оновлює роль користувача в БД та інвалідує кеш."""
     async with get_db_connection() as conn:
         await conn.execute("UPDATE users SET role = $1 WHERE user_id = $2", role, user_id)
-        logger.info(f"Роль користувача (ID: {user_id}) змінено на '{role}'.")
+    cache.invalidate_user_cache(user_id, 'role')
+    logger.info(f"Роль користувача (ID: {user_id}) змінено на '{role}'.")
 
 # --- Налаштування TTS ---
 
 async def get_user_tts_settings(user_id: int) -> Dict[str, Any]:
-    """Отримує налаштування TTS (enabled, voice) для користувача з БД.
-    """
+    """Отримує налаштування TTS (enabled, voice) для користувача з кешуванням."""
+    cached = cache.user_cache.get(user_id, {}).get('tts_settings')
+    if cached and (time.time() - cached['timestamp']) < cache.USER_CACHE_TTL:
+        return cached['value']
+
     async with get_db_connection() as conn:
         row = await conn.fetchrow(
             "SELECT tts_enabled, tts_voice FROM users WHERE user_id = $1", user_id
         )
         if row:
-            return {
+            settings_val = {
                 "tts_enabled": bool(row['tts_enabled']),
                 "tts_voice": row['tts_voice'],
             }
-    return {"tts_enabled": True, "tts_voice": "female"} # Значення за замовчуванням
+        else:
+            settings_val = {"tts_enabled": True, "tts_voice": "female"} # Значення за замовчуванням
+
+        if user_id not in cache.user_cache:
+            cache.user_cache[user_id] = {}
+        cache.user_cache[user_id]['tts_settings'] = {'timestamp': time.time(), 'value': settings_val}
+        return settings_val
 
 async def update_user_tts_enabled(user_id: int, enabled: bool):
-    """Оновлює статус TTS (увімкнено/вимкнено) для користувача."""
+    """Оновлює статус TTS та інвалідує кеш."""
     async with get_db_connection() as conn:
         await conn.execute("UPDATE users SET tts_enabled = $1 WHERE user_id = $2", enabled, user_id)
+    cache.invalidate_user_cache(user_id, 'tts_settings')
 
 async def update_user_tts_voice(user_id: int, voice: str):
-    """Оновлює голос TTS для користувача."""
+    """Оновлює голос TTS та інвалідує кеш."""
     async with get_db_connection() as conn:
         await conn.execute("UPDATE users SET tts_voice = $1 WHERE user_id = $2", voice, user_id)
+    cache.invalidate_user_cache(user_id, 'tts_settings')
 
 # --- Контекст чату ---
 

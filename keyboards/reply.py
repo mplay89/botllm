@@ -42,10 +42,14 @@ def get_settings_menu() -> ReplyKeyboardMarkup:
 def get_admin_menu(is_owner: bool) -> ReplyKeyboardMarkup:
     """Повертає клавіатуру адмін-панелі."""
     keyboard = [
-        [KeyboardButton(text="🤖 Змінити модель AI")],
+        [
+            KeyboardButton(text="🤖 Змінити модель AI"),
+            KeyboardButton(text="ℹ️ Інфо про кеш"),
+        ],
         [KeyboardButton(text="⬅️ Назад до головного меню")],
     ]
     if is_owner:
+        # Вставляємо кнопку "Редагувати адмінів" на другу позицію для власника
         keyboard.insert(1, [KeyboardButton(text="👥 Редагувати адмінів")])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
