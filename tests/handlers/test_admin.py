@@ -256,10 +256,12 @@ async def test_change_model_handler(mock_get_available_models, mock_get_text_mod
 
 
 @pytest.mark.asyncio
+@patch("handlers.admin.get_text_model_name", new_callable=AsyncMock)
 @patch("handlers.admin.get_available_models", new_callable=AsyncMock)
-async def test_change_model_handler_no_models(mock_get_available_models, mock_message):
+async def test_change_model_handler_no_models(mock_get_available_models, mock_get_text_model_name, mock_message):
     """Тестує change_model_handler, коли немає доступних моделей."""
     mock_get_available_models.return_value = []
+    mock_get_text_model_name.return_value = "models/gemini-pro"
 
     await change_model_handler(mock_message)
 
