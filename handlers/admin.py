@@ -1,9 +1,10 @@
+import os
 import time
 from aiogram import F, Router
 from aiogram.filters import Command, Filter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from config.settings import settings
 from data.admin_store import add_admin, is_admin, list_admins, remove_admin
@@ -45,44 +46,104 @@ class AdminActions(StatesGroup):
 
 # --- ІНФОРМАЦІЯ ПРО СИСТЕМУ (для власника) ---
 
-@router.message(OwnerFilter(), Command("cache_info"))
+@router.message(AdminFilter(), F.text == "ℹ️ Інфо про кеш")
 async def cache_info_handler(message: Message) -> None:
-    """Показує поточний стан кешу."""
-    logger.info("Власник (ID: %d) запросив інформацію про кеш.", message.from_user.id)
+    """Надсилає звіт про стан кешу у вигляді файлу."""
+    user_id = message.from_user.id
+    is_owner = user_id == settings.OWNER_ID
+    logger.info(
+        "%s (ID: %d) запросив інформацію про кеш.",
+        "Власник" if is_owner else "Адмін",
+        user_id,
+    )
 
     now = time.time()
-    info_parts = ["<b>ℹ️ Поточний стан кешу:</b>"]
+    info_parts = ["ℹ️ Поточний стан кешу:"]
 
-    # 1. Кеш налаштувань
-    info_parts.append("\n<b>Кеш налаштувань (settings_cache):</b>")
+    # 1. Кеш налаштувань (доступний всім адмінам)
+    info_parts.append("\nКеш налаштувань (settings_cache):")
     if cache.settings_cache:
         for key, data in cache.settings_cache.items():
             ttl = round(data['timestamp'] + cache.SETTINGS_CACHE_TTL - now)
-            info_parts.append(f"- <code>{key}</code>: {data['value']} (залишилось {ttl} сек)")
+            info_parts.append(f"- {key}: {data['value']} (залишилось {ttl} сек)")
     else:
-        info_parts.append("- <em>Порожньо</em>")
+        info_parts.append("- Порожньо")
 
-    # 2. Кеш моделей
-    info_parts.append("\n<b>Кеш моделей (models_cache):</b>")
+    # 2. Кеш моделей (доступний всім адмінам)
+    info_parts.append("\nКеш моделей (models_cache):")
     if cache.models_cache:
         ttl = round(cache.models_cache['timestamp'] + cache.MODELS_CACHE_TTL - now)
         models = cache.models_cache['models']
-        info_parts.append(f"- <code>models</code>: {models} (залишилось {ttl} сек)")
+        info_parts.append(f"- models: {models} (залишилось {ttl} сек)")
     else:
-        info_parts.append("- <em>Порожньо</em>")
+        info_parts.append("- Порожньо")
 
-    # 3. Кеш користувачів
-    info_parts.append("\n<b>Кеш користувачів (user_cache):</b>")
-    if cache.user_cache:
-        for user_id, user_data in cache.user_cache.items():
-            info_parts.append(f"\n- <b>Користувач <code>{user_id}</code>:</b>")
-            for key, data in user_data.items():
-                ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
-                info_parts.append(f"  - <code>{key}</code>: {data['value']} (залишилось {ttl} сек)")
-    else:
-        info_parts.append("- <em>Порожньо</em>")
+    # 3. Кеш користувачів (фільтрується для адмінів)
+    info_parts.append("\nКеш користувачів (user_cache):")
 
-    await message.answer("\n".join(info_parts))
+    if is_owner:
+        admin_cache_view = {}
+        user_cache_view = {}
+        for user_id_cache, user_data in cache.user_cache.items():
+            if await is_admin(user_id_cache):
+                admin_cache_view[user_id_cache] = user_data
+            else:
+                user_cache_view[user_id_cache] = user_data
+
+        if not admin_cache_view and not user_cache_view:
+            info_parts.append("- Порожньо")
+        else:
+            if admin_cache_view:
+                info_parts.append("\n👑 **Адміністратори:**")
+                for user_id_cache, user_data in admin_cache_view.items():
+                    info_parts.append(f"\n- Користувач {user_id_cache}:")
+                    for key, data in user_data.items():
+                        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+                        info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+            
+            if user_cache_view:
+                info_parts.append("\n👥 **Користувачі:**")
+                for user_id_cache, user_data in user_cache_view.items():
+                    info_parts.append(f"\n- Користувач {user_id_cache}:")
+                    for key, data in user_data.items():
+                        ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+                        info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+
+    else:  # Для адмінів
+        user_cache_view = {}
+        for user_id_cache, user_data in cache.user_cache.items():
+            if not await is_admin(user_id_cache):
+                user_cache_view[user_id_cache] = user_data
+
+        if user_cache_view:
+            for user_id_cache, user_data in user_cache_view.items():
+                info_parts.append(f"\n- Користувач {user_id_cache}:")
+                for key, data in user_data.items():
+                    ttl = round(data['timestamp'] + cache.USER_CACHE_TTL - now)
+                    info_parts.append(f"  - {key}: {data['value']} (залишилось {ttl} сек)")
+        else:
+            info_parts.append("- Порожньо (або немає користувачів для відображення)")
+
+    # Створюємо тимчасовий файл
+    file_path = f"cache_info_{user_id}.txt"
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(info_parts))
+
+        # Надсилаємо файл
+        document = FSInputFile(file_path)
+        await message.answer_document(document, caption="Звіт про стан кешу")
+        logger.info("Надіслано звіт про кеш %s (ID: %d).", "власнику" if is_owner else "адміну", user_id)
+
+    except Exception as e:
+        logger.error(
+            "Помилка під час створення або надсилання звіту про кеш: %s", e
+        )
+        await message.answer("Не вдалося згенерувати звіт про кеш.")
+    finally:
+        # Видаляємо тимчасовий файл
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 # --- НАВІГАЦІЯ АДМІН-ПАНЕЛІ ---

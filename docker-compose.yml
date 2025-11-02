@@ -14,7 +14,7 @@ services:
     env_file: .env
     volumes:
       - .:/app
-    command: pytest
+    command: pytest -v -l --full-trace
 
   autoheal:
     image: willfarrell/autoheal
