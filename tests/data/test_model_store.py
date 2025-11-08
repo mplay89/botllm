@@ -1,5 +1,5 @@
 """
-Unit tests for data.model_store module.
+Unit tests for bot.db.model_store module.
 """
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, patch, MagicMock
 # Очищення кешу перед кожним тестом
 @pytest.fixture(autouse=True)
 def reset_cache():
-    from data import cache
+    from bot.db import cache
     cache.models_cache = None
 
-from data.model_store import sync_models, get_available_models, _get_model_priority
+from bot.db.model_store import sync_models, get_available_models, _get_model_priority
 
 
 class TestModelPriority:
@@ -49,7 +49,7 @@ class TestSyncModels:
             {'model_name': 'models/gemini-2.5-pro'}
         ])
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             api_models = ['models/gemini-2.5-flash', 'models/gemini-2.5-pro']
@@ -73,7 +73,7 @@ class TestSyncModels:
         mock_transaction.__aexit__ = AsyncMock()
         mock_conn.transaction.return_value = mock_transaction
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             api_models = ['models/gemini-2.5-flash', 'models/gemini-2.5-pro']
@@ -94,7 +94,7 @@ class TestGetAvailableModels:
             {'model_name': 'models/gemini-2.5-pro'}
         ])
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             models = await get_available_models()
@@ -108,7 +108,7 @@ class TestGetAvailableModels:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             models = await get_available_models()
@@ -124,7 +124,7 @@ class TestGetAvailableModels:
             {'model_name': 'models/gemini-2.5-flash'}
         ])
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             await get_available_models()
@@ -145,7 +145,7 @@ class TestGetAvailableModels:
         mock_transaction.__aexit__ = AsyncMock()
         mock_conn.transaction.return_value = mock_transaction
 
-        with patch('data.model_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.model_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             # First call should hit DB

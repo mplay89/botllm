@@ -6,7 +6,7 @@ import pytest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from handlers.admin import (
+from bot.handlers.admin import (
     AdminActions,
     AdminFilter,
     OwnerFilter,
@@ -23,7 +23,7 @@ from handlers.admin import (
     remove_admin_start_handler,
     set_model_callback_handler,
 )
-from keyboards.reply import get_admin_menu
+from bot.presentation.keyboards.reply import get_admin_menu
 
 # pytest_plugins = ("pytest_asyncio",)
 
@@ -63,9 +63,9 @@ def fsm_context():
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.logger")
 async def test_admin_panel_handler(mock_logger, mock_is_admin, mock_message):
     """Тестує вхід в адмін-панель."""
     mock_message.from_user.id = OWNER_ID
@@ -79,12 +79,12 @@ async def test_admin_panel_handler(mock_logger, mock_is_admin, mock_message):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
-@patch("handlers.admin.cache")
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.aiofiles.open")
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.cache")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.aiofiles.open")
 @patch("os.remove")
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.logger")
 async def test_cache_info_handler_sends_file_owner(
     mock_logger, mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
@@ -119,12 +119,12 @@ async def test_cache_info_handler_sends_file_owner(
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
-@patch("handlers.admin.cache")
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.aiofiles.open")
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.cache")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.aiofiles.open")
 @patch("os.remove")
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.logger")
 async def test_cache_info_handler_sends_file_admin(
     mock_logger, mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
 ):
@@ -158,7 +158,7 @@ async def test_cache_info_handler_sends_file_admin(
     assert f"Користувач {USER_ID}" in file_content
 
 @pytest.mark.asyncio
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
 async def test_admin_filter(mock_is_admin, mock_message):
     """Тестує AdminFilter."""
     mock_message.from_user.id = ADMIN_ID
@@ -171,7 +171,7 @@ async def test_admin_filter(mock_is_admin, mock_message):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
 async def test_owner_filter(mock_message):
     """Тестує OwnerFilter."""
     mock_message.from_user.id = OWNER_ID
@@ -183,10 +183,10 @@ async def test_owner_filter(mock_message):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
-@patch("handlers.admin.cache")
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.aiofiles.open")
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.cache")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_empty_cache(
     mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
@@ -208,10 +208,10 @@ async def test_cache_info_handler_empty_cache(
     assert "- Порожньо" in file_content
 
 @pytest.mark.asyncio
-@patch("handlers.admin.is_admin", new_callable=AsyncMock)
-@patch("handlers.admin.cache")
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.aiofiles.open")
+@patch("bot.handlers.admin.is_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.cache")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.aiofiles.open")
 @patch("os.remove")
 async def test_cache_info_handler_with_data(
     mock_remove, mock_aio_open, mock_cache, mock_is_admin, mock_message
@@ -237,8 +237,8 @@ async def test_cache_info_handler_with_data(
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_back_to_admin_panel_handler(mock_logger, mock_message, fsm_context):
     """Тестує повернення до адмін-панелі."""
     mock_message.from_user.id = OWNER_ID
@@ -253,9 +253,9 @@ async def test_back_to_admin_panel_handler(mock_logger, mock_message, fsm_contex
     mock_logger.info.assert_called_once()
 
 @pytest.mark.asyncio
-@patch("handlers.admin.get_text_model_name", new_callable=AsyncMock)
-@patch("handlers.admin.get_available_models", new_callable=AsyncMock)
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.get_text_model_name", new_callable=AsyncMock)
+@patch("bot.handlers.admin.get_available_models", new_callable=AsyncMock)
+@patch("bot.handlers.admin.logger")
 async def test_change_model_handler(mock_logger, mock_get_available_models, mock_get_text_model_name, mock_message):
     """Тестує change_model_handler."""
     mock_get_text_model_name.return_value = "models/gemini-pro"
@@ -269,8 +269,8 @@ async def test_change_model_handler(mock_logger, mock_get_available_models, mock
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.get_text_model_name", new_callable=AsyncMock)
-@patch("handlers.admin.get_available_models", new_callable=AsyncMock)
+@patch("bot.handlers.admin.get_text_model_name", new_callable=AsyncMock)
+@patch("bot.handlers.admin.get_available_models", new_callable=AsyncMock)
 async def test_change_model_handler_no_models(mock_get_available_models, mock_get_text_model_name, mock_message):
     """Тестує change_model_handler, коли немає доступних моделей."""
     mock_get_available_models.return_value = []
@@ -284,9 +284,9 @@ async def test_change_model_handler_no_models(mock_get_available_models, mock_ge
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.set_text_model", new_callable=AsyncMock)
-@patch("handlers.admin.get_available_models", new_callable=AsyncMock)
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.set_text_model", new_callable=AsyncMock)
+@patch("bot.handlers.admin.get_available_models", new_callable=AsyncMock)
+@patch("bot.handlers.admin.logger")
 async def test_set_model_callback_handler(mock_logger, mock_get_available_models, mock_set_text_model, mock_callback_query):
     """Тестує set_model_callback_handler."""
     mock_set_text_model.return_value = True
@@ -302,7 +302,7 @@ async def test_set_model_callback_handler(mock_logger, mock_get_available_models
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.set_text_model", new_callable=AsyncMock)
+@patch("bot.handlers.admin.set_text_model", new_callable=AsyncMock)
 async def test_set_model_callback_handler_fail(mock_set_text_model, mock_callback_query):
     """Тестує set_model_callback_handler, коли не вдається змінити модель."""
     mock_set_text_model.return_value = False
@@ -313,8 +313,8 @@ async def test_set_model_callback_handler_fail(mock_set_text_model, mock_callbac
     mock_callback_query.answer.assert_called_once_with("Не вдалося змінити модель.", show_alert=True)
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_manage_admins_handler(mock_logger, mock_message):
     """Тестує manage_admins_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -336,8 +336,8 @@ async def test_manage_admins_handler_not_owner(mock_message):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_add_admin_start_handler(mock_logger, mock_message, fsm_context):
     """Тестує add_admin_start_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -362,8 +362,8 @@ async def test_add_admin_start_handler_not_owner(mock_message, fsm_context):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_remove_admin_start_handler(mock_logger, mock_message, fsm_context):
     """Тестує remove_admin_start_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -388,9 +388,9 @@ async def test_remove_admin_start_handler_not_owner(mock_message, fsm_context):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.list_admins", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.list_admins", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_list_admins_handler(mock_logger, mock_list_admins, mock_message):
     """Тестує list_admins_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -403,7 +403,7 @@ async def test_list_admins_handler(mock_logger, mock_list_admins, mock_message):
     mock_logger.info.assert_called_once()
 
 @pytest.mark.asyncio
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.logger")
 async def test_list_admins_handler_not_owner(mock_logger, mock_message):
     """Тестує list_admins_handler, коли користувач не є власником."""
     mock_message.from_user.id = ADMIN_ID
@@ -414,8 +414,8 @@ async def test_list_admins_handler_not_owner(mock_logger, mock_message):
     
 
 @pytest.mark.asyncio
-@patch("handlers.admin.list_admins", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.list_admins", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
 async def test_list_admins_handler_empty(mock_list_admins, mock_message):
     """Тестує list_admins_handler з порожнім списком адмінів."""
     mock_message.from_user.id = OWNER_ID
@@ -427,8 +427,8 @@ async def test_list_admins_handler_empty(mock_list_admins, mock_message):
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_cancel_fsm_handler(mock_logger, mock_message, fsm_context):
     """Тестує cancel_fsm_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -442,8 +442,8 @@ async def test_cancel_fsm_handler(mock_logger, mock_message, fsm_context):
     mock_logger.info.assert_called_once()
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_cancel_fsm_handler_no_state(mock_logger, mock_message, fsm_context):
     """Тестує cancel_fsm_handler, коли немає стану."""
     mock_message.from_user.id = OWNER_ID
@@ -455,9 +455,9 @@ async def test_cancel_fsm_handler_no_state(mock_logger, mock_message, fsm_contex
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.add_admin", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.add_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_add_admin_handler_by_id(mock_logger, mock_add_admin, mock_message, fsm_context):
     """Тестує process_add_admin_handler з ID."""
     mock_message.from_user.id = OWNER_ID
@@ -475,9 +475,9 @@ async def test_process_add_admin_handler_by_id(mock_logger, mock_add_admin, mock
     mock_logger.info.assert_called_once()
 
 @pytest.mark.asyncio
-@patch("handlers.admin.add_admin", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.add_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_add_admin_handler_already_admin(mock_logger, mock_add_admin, mock_message, fsm_context):
     """Тестує process_add_admin_handler, коли користувач вже є адміном."""
     mock_message.from_user.id = OWNER_ID
@@ -494,9 +494,9 @@ async def test_process_add_admin_handler_already_admin(mock_logger, mock_add_adm
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.add_admin", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.add_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_add_admin_handler_forward(mock_logger, mock_add_admin, mock_message, fsm_context):
     """Тестує process_add_admin_handler з пересланим повідомленням."""
     mock_message.from_user.id = OWNER_ID
@@ -512,8 +512,8 @@ async def test_process_add_admin_handler_forward(mock_logger, mock_add_admin, mo
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_add_admin_handler_invalid(mock_logger, mock_message, fsm_context):
     """Тестує process_add_admin_handler з невірними даними."""
     mock_message.from_user.id = OWNER_ID
@@ -529,9 +529,9 @@ async def test_process_add_admin_handler_invalid(mock_logger, mock_message, fsm_
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.remove_admin", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.remove_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_remove_admin_handler(mock_logger, mock_remove_admin, mock_message, fsm_context):
     """Тестує process_remove_admin_handler."""
     mock_message.from_user.id = OWNER_ID
@@ -548,9 +548,9 @@ async def test_process_remove_admin_handler(mock_logger, mock_remove_admin, mock
     mock_logger.info.assert_called_once()
 
 @pytest.mark.asyncio
-@patch("handlers.admin.remove_admin", new_callable=AsyncMock)
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.remove_admin", new_callable=AsyncMock)
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_remove_admin_handler_not_admin(mock_logger, mock_remove_admin, mock_message, fsm_context):
     """Тестує process_remove_admin_handler, коли користувач не є адміном."""
     mock_message.from_user.id = OWNER_ID
@@ -566,8 +566,8 @@ async def test_process_remove_admin_handler_not_admin(mock_logger, mock_remove_a
 
 
 @pytest.mark.asyncio
-@patch("handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
-@patch("handlers.admin.logger")
+@patch("bot.handlers.admin.settings", MagicMock(OWNER_ID=OWNER_ID))
+@patch("bot.handlers.admin.logger")
 async def test_process_remove_admin_handler_invalid(mock_logger, mock_message, fsm_context):
     """Тестує process_remove_admin_handler з невірними даними."""
     mock_message.from_user.id = OWNER_ID

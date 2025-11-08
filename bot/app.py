@@ -7,13 +7,13 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramForbiddenError
 
-from config.settings import settings
-from data.cache import warm_up_caches
-from data.database import init_db
-from handlers import admin, general
-from handlers import settings as settings_handler
-from services.gemini import refresh_available_models
-from utils.logging_setup import get_logger, setup_logging
+from bot.config.settings import settings
+from bot.db.cache import warm_up_caches
+from bot.db.database import init_db
+from bot.handlers import admin, general
+from bot.handlers import settings as settings_handler
+from bot.services.gemini import refresh_available_models
+from bot.core.logging_setup import get_logger, setup_logging
 
 logger = get_logger(__name__)
 

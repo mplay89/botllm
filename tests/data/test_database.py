@@ -4,15 +4,11 @@ from unittest.mock import AsyncMock, patch, call
 
 import pytest
 
-# Додаємо шлях до кореня проєкту, щоб можна було імпортувати data.database
-import sys
-sys.path.append('.')
-
-from data.database import init_db
+from bot.db.database import init_db
 
 @pytest.mark.asyncio
-@patch('data.database.asyncio.sleep', new_callable=AsyncMock)
-@patch('data.database.get_db_connection')
+@patch('bot.db.database.asyncio.sleep', new_callable=AsyncMock)
+@patch('bot.db.database.get_db_connection')
 async def test_init_db_retries_and_succeeds(mock_get_db_connection, mock_sleep):
     """Тестує, що init_db робить повторні спроби при помилці мережі і врешті-решт спрацьовує."""
     # Налаштовуємо мок, щоб він спочатку викликав помилку, а потім працював успішно
@@ -30,8 +26,8 @@ async def test_init_db_retries_and_succeeds(mock_get_db_connection, mock_sleep):
     mock_sleep.assert_has_calls([call(5), call(5)])
 
 @pytest.mark.asyncio
-@patch('data.database.asyncio.sleep', new_callable=AsyncMock)
-@patch('data.database.get_db_connection')
+@patch('bot.db.database.asyncio.sleep', new_callable=AsyncMock)
+@patch('bot.db.database.get_db_connection')
 async def test_init_db_fails_after_all_retries(mock_get_db_connection, mock_sleep):
     """Тестує, що init_db падає з помилкою після всіх невдалих спроб."""
     # Налаштовуємо мок, щоб він завжди викликав помилку

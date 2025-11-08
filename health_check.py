@@ -5,7 +5,7 @@ import sys
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 
-from config.settings import settings
+from bot.config.settings import settings
 
 # Налаштовуємо логування для виводу тільки помилок
 logging.basicConfig(level=logging.ERROR)

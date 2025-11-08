@@ -5,10 +5,12 @@ from aiogram.enums.chat_action import ChatAction
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from data.user_settings import register_user_if_not_exists
-from keyboards.reply import get_main_menu, get_settings_menu
-from services.gemini import GeminiService
-from utils.logging_setup import get_logger
+from bot.db.user_settings import register_user_if_not_exists
+from bot.presentation.keyboards.reply import get_main_menu, get_settings_menu
+from bot.presentation.message_utils import send_long_message
+from bot.presentation.status_messages import delete_status, send_status, update_status
+from bot.services.gemini import GeminiService
+from bot.core.logging_setup import get_logger
 
 router = Router()
 logger = get_logger(__name__)
@@ -62,12 +64,19 @@ async def text_message_handler(message: Message, bot: Bot) -> None:
         user_id,
     )
 
+    status_msg = None
     try:
+        # Відправляємо статус-повідомлення
+        status_msg = await send_status(message, "Генерація відповіді.")
+
         await bot.send_chat_action(chat_id=user_id, action=ChatAction.TYPING)
         gemini_service = GeminiService(user_id=user_id, bot=bot)
         response_text = await gemini_service.generate_text_response(prompt)
 
-        await message.answer(response_text)
+        # Оновлюємо статус перед надсиланням
+        await update_status(status_msg, "Відповідь отримана. Надсилання.")
+
+        await send_long_message(message, response_text)
         logger.info("Надіслано відповідь від Gemini для користувача (ID: %d).", user_id)
 
     except Exception:
@@ -77,3 +86,7 @@ async def text_message_handler(message: Message, bot: Bot) -> None:
         await message.answer(
             "Виникла помилка під час обробки вашого запиту. Спробуйте пізніше."
         )
+    finally:
+        # Видаляємо статус-повідомлення після завершення
+        if status_msg:
+            await delete_status(status_msg)

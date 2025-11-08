@@ -6,11 +6,11 @@ from aiogram import Bot
 from google.api_core import exceptions as google_exceptions
 from google import genai
 
-from config import runtime_config
-from config.settings import settings
-from data.config_store import get_api_text_model_name
-from data.model_store import sync_models
-from data.user_settings import add_message_to_context, get_user_context
+from bot.config import runtime_config
+from bot.config.settings import settings
+from bot.db.config_store import get_api_text_model_name
+from bot.db.model_store import sync_models
+from bot.db.user_settings import add_message_to_context, get_user_context
 
 logger = logging.getLogger(__name__)
 
