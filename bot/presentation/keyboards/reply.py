@@ -1,11 +1,13 @@
 """Модуль для створення reply-клавіатур."""
 
+from typing import Optional
+
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
-from data.admin_store import is_admin
+from bot.db.admin_store import is_admin
 
 
-async def get_main_menu(user_id: int | None = None) -> ReplyKeyboardMarkup:
+async def get_main_menu(user_id: Optional[int] = None) -> ReplyKeyboardMarkup:
     """
     Повертає клавіатуру головного меню.
 

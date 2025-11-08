@@ -4,7 +4,7 @@ import asyncio
 import socket
 from contextlib import asynccontextmanager
 
-from config.settings import settings
+from bot.config.settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,8 @@ import logging
 import time
 from typing import List
 
-from data.database import get_db_connection
-from data import cache
+from bot.db.database import get_db_connection
+from bot.db import cache
 
 logger = logging.getLogger(__name__)
 

@@ -9,16 +9,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
-from config.settings import settings
-from data.admin_store import add_admin, is_admin, list_admins, remove_admin
-from data.config_store import get_text_model_name, set_text_model
-from data.model_store import get_available_models
-from keyboards.inline import get_model_selection_keyboard
-from keyboards.reply import get_admin_management_keyboard, get_admin_menu
-from utils.logging_setup import get_logger
+from bot.config.settings import settings
+from bot.db.admin_store import add_admin, is_admin, list_admins, remove_admin
+from bot.db.config_store import get_text_model_name, set_text_model
+from bot.db.model_store import get_available_models
+from bot.presentation.keyboards.inline import get_model_selection_keyboard
+from bot.presentation.keyboards.reply import get_admin_management_keyboard, get_admin_menu
+from bot.core.logging_setup import get_logger
 
 # Імпортуємо кеші для моніторингу
-from data import cache
+from bot.db import cache
 
 router = Router()
 logger = get_logger(__name__)

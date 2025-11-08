@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Dict, Any, List, Optional
 from aiogram.types import User
-from data.database import get_db_connection
-from config.settings import settings
-from data import cache
+from bot.db.database import get_db_connection
+from bot.config.settings import settings
+from bot.db import cache
 
 logger = logging.getLogger(__name__)
 

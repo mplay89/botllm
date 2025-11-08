@@ -3,13 +3,13 @@
 from aiogram import F, Router
 from aiogram.types import Message
 
-from data.user_settings import (
+from bot.db.user_settings import (
     clear_user_context,
     register_user_if_not_exists,
     update_user_tts_enabled,
     update_user_tts_voice,
 )
-from utils.logging_setup import get_logger
+from bot.core.logging_setup import get_logger
 
 router = Router()
 logger = get_logger(__name__)

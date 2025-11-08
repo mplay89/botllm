@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Dict, Any, Optional
 
-from data.database import get_db_connection
+from bot.db.database import get_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -28,19 +28,19 @@ USER_CACHE_TTL = 120  # 2 хвилини
 
 async def _warm_up_models_cache():
     """Завантажує в кеш список доступних моделей."""
-    from data.model_store import get_available_models
+    from bot.db.model_store import get_available_models
     await get_available_models()
     logger.info("Кеш моделей прогріто.")
 
 async def _warm_up_settings_cache():
     """Завантажує в кеш основні налаштування."""
-    from data.config_store import get_text_model_name
+    from bot.db.config_store import get_text_model_name
     await get_text_model_name()
     logger.info("Кеш налаштувань прогріто.")
 
 async def _warm_up_users_cache():
     """Завантажує в кеш дані всіх існуючих користувачів."""
-    from data.user_settings import get_user_role, get_user_tts_settings
+    from bot.db.user_settings import get_user_role, get_user_tts_settings
     async with get_db_connection() as conn:
         user_ids = await conn.fetch("SELECT user_id FROM users")
         if user_ids:

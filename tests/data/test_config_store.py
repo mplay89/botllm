@@ -1,5 +1,5 @@
 """
-Unit tests for data.config_store module.
+Unit tests for bot.db.config_store module.
 """
 import asyncio
 import pytest
@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, patch
 # Очищення кешу перед кожним тестом, щоб уникнути взаємного впливу
 @pytest.fixture(autouse=True)
 def reset_cache():
-    from data import cache
+    from bot.db import cache
     cache.settings_cache = {}
 
-from data.config_store import (
+from bot.db.config_store import (
     get_setting,
     set_setting,
     get_text_model_name,
@@ -28,7 +28,7 @@ class TestConfigStore:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value="test_value")
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             value = await get_setting("test_key")
@@ -41,7 +41,7 @@ class TestConfigStore:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value=None)
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             value = await get_setting("missing_key", default="default_val")
@@ -53,7 +53,7 @@ class TestConfigStore:
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             await set_setting("test_key", "test_value")
@@ -70,7 +70,7 @@ class TestConfigStore:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value="cached_value")
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             # Перший виклик - має піти в БД
@@ -102,7 +102,7 @@ class TestModelConfig:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value="models/gemini-2.5-flash")
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_get_conn.return_value.__aexit__ = AsyncMock()
 
@@ -115,7 +115,7 @@ class TestModelConfig:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value=None)
 
-        with patch('data.config_store.get_db_connection') as mock_get_conn:
+        with patch('bot.db.config_store.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_get_conn.return_value.__aexit__ = AsyncMock()
 
@@ -125,10 +125,10 @@ class TestModelConfig:
 
     async def test_set_text_model_available(self):
         """Test setting text model when it's available."""
-        with patch('data.config_store.get_available_models') as mock_get_models:
+        with patch('bot.db.config_store.get_available_models') as mock_get_models:
             mock_get_models.return_value = ["models/gemini-2.5-flash", "models/gemini-2.5-pro"]
 
-            with patch('data.config_store.set_setting') as mock_set:
+            with patch('bot.db.config_store.set_setting') as mock_set:
                 result = await set_text_model("models/gemini-2.5-flash")
 
                 assert result is True
@@ -136,10 +136,10 @@ class TestModelConfig:
 
     async def test_set_text_model_unavailable(self):
         """Test setting text model when it's not available."""
-        with patch('data.config_store.get_available_models') as mock_get_models:
+        with patch('bot.db.config_store.get_available_models') as mock_get_models:
             mock_get_models.return_value = ["models/gemini-2.5-flash"]
 
-            with patch('data.config_store.set_setting') as mock_set:
+            with patch('bot.db.config_store.set_setting') as mock_set:
                 result = await set_text_model("models/invalid-model")
 
                 assert result is False

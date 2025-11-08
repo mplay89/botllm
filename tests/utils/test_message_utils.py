@@ -4,7 +4,7 @@ Unit tests for utils.message_utils module.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from utils.message_utils import send_long_message, MAX_MESSAGE_LENGTH
+from bot.presentation.message_utils import send_long_message, MAX_MESSAGE_LENGTH
 
 
 class TestSendLongMessage:

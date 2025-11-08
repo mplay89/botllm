@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Optional
 
-from data.database import get_db_connection
-from data.model_store import get_available_models
-from data import cache
+from bot.db.database import get_db_connection
+from bot.db.model_store import get_available_models
+from bot.db import cache
 
 logger = logging.getLogger(__name__)
 

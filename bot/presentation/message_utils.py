@@ -3,7 +3,7 @@
 """
 
 from aiogram.types import Message
-from utils.logging_setup import get_logger
+from bot.core.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

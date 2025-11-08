@@ -4,7 +4,7 @@ Unit tests for utils.status_messages module.
 import pytest
 from unittest.mock import AsyncMock
 
-from utils.status_messages import send_status, update_status, delete_status
+from bot.presentation.status_messages import send_status, update_status, delete_status
 
 
 class TestSendStatus:

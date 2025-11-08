@@ -8,10 +8,10 @@ from aiogram.types import User
 # Очищення кешу перед кожним тестом
 @pytest.fixture(autouse=True)
 def reset_cache():
-    from data import cache
+    from bot.db import cache
     cache.user_cache = {}
 
-from data.user_settings import (
+from bot.db.user_settings import (
     register_user_if_not_exists,
     get_user_role,
     update_user_role,
@@ -40,7 +40,7 @@ class TestUserRegistration:
         mock_user.full_name = "Test User"
         mock_user.last_name = "User"
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             await register_user_if_not_exists(mock_user)
@@ -63,10 +63,10 @@ class TestUserRegistration:
         mock_user.full_name = "Owner"
         mock_user.last_name = "User"
 
-        with patch('data.user_settings.settings') as patched_settings:
+        with patch('bot.db.user_settings.settings') as patched_settings:
             patched_settings.OWNER_ID = 123456789
 
-            with patch('data.user_settings.get_db_connection') as mock_get_conn:
+            with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
                 mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
                 await register_user_if_not_exists(mock_user)
@@ -84,7 +84,7 @@ class TestUserRegistration:
         mock_user.id = 123
         mock_user.username = "existing"
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             await register_user_if_not_exists(mock_user)
@@ -101,7 +101,7 @@ class TestUserRoles:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value="admin")
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             role = await get_user_role(123)
@@ -114,7 +114,7 @@ class TestUserRoles:
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             await update_user_role(123, "admin")
@@ -130,7 +130,7 @@ class TestUserRoles:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value="admin")
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             # First call should hit DB
@@ -165,7 +165,7 @@ class TestTTSSettings:
             'tts_voice': 'male'
         })
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             settings = await get_user_tts_settings(123)
@@ -178,7 +178,7 @@ class TestTTSSettings:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             settings = await get_user_tts_settings(123)
@@ -191,7 +191,7 @@ class TestTTSSettings:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value={'tts_enabled': False, 'tts_voice': 'test_voice'})
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
 
             # First call
@@ -226,7 +226,7 @@ class TestChatContext:
             {'role': 'model', 'content': 'Hi there!'}
         ])
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_get_conn.return_value.__aexit__ = AsyncMock()
 
@@ -242,7 +242,7 @@ class TestChatContext:
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_get_conn.return_value.__aexit__ = AsyncMock()
 
@@ -260,7 +260,7 @@ class TestChatContext:
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
 
-        with patch('data.user_settings.get_db_connection') as mock_get_conn:
+        with patch('bot.db.user_settings.get_db_connection') as mock_get_conn:
             mock_get_conn.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_get_conn.return_value.__aexit__ = AsyncMock()
 

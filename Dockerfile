@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
 COPY . .
 
 # Command to run the application
-CMD ["python", "main.py"]
+CMD ["python", "-m", "bot.app"]
 
 # Health check to verify the bot is running and connected
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

@@ -33,7 +33,7 @@ async def mock_db_connection():
 @pytest.fixture
 def mock_settings():
     """Mock settings for testing."""
-    with patch('config.settings.settings') as mock:
+    with patch('bot.config.settings.settings') as mock:
         mock.TG_TOKEN = "test_token"
         mock.GEMINI_API_KEY = "test_api_key"
         mock.OWNER_ID = 123456789

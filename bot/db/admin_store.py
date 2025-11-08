@@ -1,7 +1,7 @@
 from typing import List, Dict
-from data.user_settings import get_user_role, update_user_role
-from data.database import get_db_connection
-from config.settings import settings
+from bot.db.user_settings import get_user_role, update_user_role
+from bot.db.database import get_db_connection
+from bot.config.settings import settings
 
 async def is_admin(user_id: int) -> bool:
     """Перевіряє, чи є користувач адміном або власником, на основі ролі в БД.
