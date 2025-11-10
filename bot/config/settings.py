@@ -11,5 +11,16 @@ class Settings(BaseSettings):
     OWNER_ID: int
     DATABASE_URL: str
 
+    # Ollama/Qwen Configuration
+    OLLAMA_HOST: str = "http://ollama:11434"  # NOSONAR - internal Docker service
+    OLLAMA_MODEL: str = "qwen2.5:7b-instruct-q5_K_M"
+
+    # Ollama Resource Limits (для Docker)
+    OLLAMA_NUM_PARALLEL: int = 1
+    OLLAMA_MAX_LOADED_MODELS: int = 1
+    OLLAMA_MAX_QUEUE: int = 512
+    OLLAMA_CPU_LIMIT: str = "4"
+    OLLAMA_MEMORY_LIMIT: str = "8G"
+
 
 settings = Settings()

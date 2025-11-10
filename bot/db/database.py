@@ -1,7 +1,6 @@
 import asyncpg
 import logging
 import asyncio
-import socket
 from contextlib import asynccontextmanager
 
 from bot.config.settings import settings
@@ -94,7 +93,7 @@ async def init_db():
 
             logger.info("Базу даних PostgreSQL успішно ініціалізовано.")
             return  # Успішне завершення
-        except (socket.gaierror, OSError) as e:
+        except OSError as e:
             if attempt < retries - 1:
                 logger.warning(
                     f"Не вдалося підключитися до БД (спроба {attempt + 1}/{retries}): {e}. "
