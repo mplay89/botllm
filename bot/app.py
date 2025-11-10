@@ -10,7 +10,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from bot.config.settings import settings
 from bot.db.cache import warm_up_caches
 from bot.db.database import init_db
-from bot.handlers import admin, general
+from bot.handlers import admin, general, qwen
 from bot.handlers import settings as settings_handler
 from bot.services.gemini import refresh_available_models
 from bot.core.logging_setup import get_logger, setup_logging
@@ -34,6 +34,7 @@ async def main() -> None:
 
     dp.include_router(admin.router)
     dp.include_router(settings_handler.router)
+    dp.include_router(qwen.router)
     dp.include_router(general.router)  # Цей роутер має бути останнім
 
     # Повідомлення власнику про запуск
