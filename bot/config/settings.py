@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
 
     # Ollama/Qwen Configuration
-    OLLAMA_HOST: str = "http://ollama:11434"
+    OLLAMA_HOST: str = "http://ollama:11434"  # NOSONAR - internal Docker service
     OLLAMA_MODEL: str = "qwen2.5:7b-instruct-q5_K_M"
 
     # Ollama Resource Limits (для Docker)
