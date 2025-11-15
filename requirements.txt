@@ -10,4 +10,3 @@ google-api-core
 asyncpg
 ruff
 aiofiles
-ollama>=0.3.0
