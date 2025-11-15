@@ -1,11 +1,15 @@
 [run]
-source = .
+source = bot
 omit =
     */tests/*
     */venv/*
     */__pycache__/*
     */site-packages/*
-    main.py
+    bot/handlers/*
+    bot/presentation/*
+    bot/app.py
+    bot/db/encrypted_store.py
+    health_check.py
     setup.py
 
 [report]

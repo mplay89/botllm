@@ -6,7 +6,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from google.api_core import exceptions as google_exceptions
 
-from services.gemini import GeminiService, refresh_available_models
+from bot.services.gemini import GeminiService, refresh_available_models
 
 
 @pytest.mark.asyncio
@@ -20,10 +20,10 @@ class TestRefreshAvailableModels:
         mock_model2 = MagicMock()
         mock_model2.name = "models/gemini-2.5-pro"
 
-        with patch('services.gemini.client') as mock_client:
+        with patch('bot.services.gemini.client') as mock_client:
             mock_client.models.list = MagicMock(return_value=[mock_model1, mock_model2])
 
-            with patch('services.gemini.sync_models') as mock_sync:
+            with patch('bot.services.gemini.sync_models') as mock_sync:
                 await refresh_available_models()
 
                 mock_sync.assert_called_once()
@@ -38,10 +38,10 @@ class TestRefreshAvailableModels:
         mock_model2 = MagicMock()
         mock_model2.name = "models/gemini-2.5-preview"  # Should be filtered
 
-        with patch('services.gemini.client') as mock_client:
+        with patch('bot.services.gemini.client') as mock_client:
             mock_client.models.list = MagicMock(return_value=[mock_model1, mock_model2])
 
-            with patch('services.gemini.sync_models') as mock_sync:
+            with patch('bot.services.gemini.sync_models') as mock_sync:
                 await refresh_available_models()
 
                 call_args = mock_sync.call_args[0][0]
@@ -55,10 +55,10 @@ class TestRefreshAvailableModels:
         mock_model2 = MagicMock()
         mock_model2.name = "models/gemini-2.5-audio"  # Should be filtered
 
-        with patch('services.gemini.client') as mock_client:
+        with patch('bot.services.gemini.client') as mock_client:
             mock_client.models.list = MagicMock(return_value=[mock_model1, mock_model2])
 
-            with patch('services.gemini.sync_models') as mock_sync:
+            with patch('bot.services.gemini.sync_models') as mock_sync:
                 await refresh_available_models()
 
                 call_args = mock_sync.call_args[0][0]
@@ -67,8 +67,8 @@ class TestRefreshAvailableModels:
 
     async def test_refresh_client_not_initialized(self):
         """Test refresh when client is not initialized."""
-        with patch('services.gemini.client', None):
-            with patch('services.gemini.sync_models') as mock_sync:
+        with patch('bot.services.gemini.client', None):
+            with patch('bot.services.gemini.sync_models') as mock_sync:
                 await refresh_available_models()
 
                 mock_sync.assert_not_called()
@@ -88,13 +88,13 @@ class TestGeminiService:
         mock_response = MagicMock()
         mock_response.text = "Test response"
 
-        with patch('services.gemini.client') as mock_client:
+        with patch('bot.services.gemini.client') as mock_client:
             mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = "models/gemini-2.5-flash"
-                with patch('services.gemini.get_user_context', return_value=[]):
-                    with patch('services.gemini.add_message_to_context'):
+                with patch('bot.services.gemini.get_user_context', return_value=[]):
+                    with patch('bot.services.gemini.add_message_to_context'):
                         response = await service.generate_text_response("Test prompt")
 
                         assert response == "Test response"
@@ -106,7 +106,7 @@ class TestGeminiService:
 
         service = GeminiService(user_id=123, bot=mock_bot)
 
-        with patch('services.gemini.client', None):
+        with patch('bot.services.gemini.client', None):
             response = await service.generate_text_response("Test")
 
             assert "не налаштований для роботи з AI-моделями" in response
@@ -118,8 +118,8 @@ class TestGeminiService:
 
         service = GeminiService(user_id=123, bot=mock_bot)
 
-        with patch('services.gemini.client'):
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+        with patch('bot.services.gemini.client'):
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = ""
                 response = await service.generate_text_response("Test")
 
@@ -132,11 +132,11 @@ class TestGeminiService:
 
         service = GeminiService(user_id=123, bot=mock_bot)
 
-        with patch('services.gemini.client'):
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+        with patch('bot.services.gemini.client'):
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = "models/gemini-2.5-flash"
-                with patch('services.gemini.get_user_context', return_value=[]):
-                    with patch('services.gemini.add_message_to_context'):
+                with patch('bot.services.gemini.get_user_context', return_value=[]):
+                    with patch('bot.services.gemini.add_message_to_context'):
                         with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError):
                             with patch('asyncio.sleep', new_callable=AsyncMock):
                                 response = await service.generate_text_response("Test")
@@ -151,10 +151,10 @@ class TestGeminiService:
 
         service = GeminiService(user_id=123, bot=mock_bot)
 
-        with patch('services.gemini.client'):
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+        with patch('bot.services.gemini.client'):
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = "models/gemini-2.5-flash"
-                with patch('services.gemini.get_user_context', return_value=[]):
+                with patch('bot.services.gemini.get_user_context', return_value=[]):
                     with patch('asyncio.wait_for', side_effect=google_exceptions.ResourceExhausted("Quota exceeded")):
                         with patch('asyncio.sleep', new_callable=AsyncMock):
                             response = await service.generate_text_response("Test")
@@ -168,12 +168,12 @@ class TestGeminiService:
 
         service = GeminiService(user_id=123, bot=mock_bot)
 
-        with patch('services.gemini.client'):
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+        with patch('bot.services.gemini.client'):
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = "models/invalid"
-                with patch('services.gemini.get_user_context', return_value=[]):
+                with patch('bot.services.gemini.get_user_context', return_value=[]):
                     with patch('asyncio.wait_for', side_effect=Exception("Model is not found")):
-                        with patch('services.gemini.refresh_available_models', new_callable=AsyncMock):
+                        with patch('bot.services.gemini.refresh_available_models', new_callable=AsyncMock):
                             response = await service.generate_text_response("Test")
 
                             assert "модель не знайдено" in response
@@ -189,14 +189,14 @@ class TestGeminiService:
         # Create context with more messages than limit
         large_context = [{'role': 'user', 'parts': [{'text': f'msg{i}'}]} for i in range(15)]
 
-        with patch('services.gemini.client') as mock_client:
+        with patch('bot.services.gemini.client') as mock_client:
             mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-            with patch('services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
+            with patch('bot.services.gemini.get_api_text_model_name', new_callable=AsyncMock) as mock_get_model:
                 mock_get_model.return_value = "models/gemini-2.5-flash"
-                with patch('services.gemini.get_user_context', return_value=large_context):
-                    with patch('services.gemini.add_message_to_context'):
-                        with patch('services.gemini.runtime_config') as mock_config:
+                with patch('bot.services.gemini.get_user_context', return_value=large_context):
+                    with patch('bot.services.gemini.add_message_to_context'):
+                        with patch('bot.services.gemini.runtime_config') as mock_config:
                             mock_config.CONTEXT_MESSAGE_LIMIT = 10
                             mock_config.GEMINI_API_TIMEOUT = 60
                             mock_config.API_RETRY_ATTEMPTS = 1

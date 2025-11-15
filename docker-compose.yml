@@ -50,8 +50,7 @@ services:
     env_file: .env
     volumes:
       - .:/app
-    command: >
-      bash -c "pip install -r requirements-dev.txt && pytest"
+    command: pytest -v -l --full-trace
 
   autoheal:
     image: willfarrell/autoheal
@@ -60,3 +59,6 @@ services:
       - AUTOHEAL_CONTAINER_LABEL=autoheal
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  ollama_data:

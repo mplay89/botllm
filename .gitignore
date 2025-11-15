@@ -1,11 +1,14 @@
 # Byte-compiled / optimized / compiled files
 __pycache__/
+*.pyc
 *.py[cod]
 *$py.class
 .vscode
+.coveragerc
 
 # AI
 .gemini/
+.claude/
 
 # C extensions
 *.so
